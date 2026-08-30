@@ -1,0 +1,5 @@
+flask==3.0.3
+lxml==5.2.2
+numpy==1.26.4
+scipy==1.13.1
+pyproj==3.6.1
