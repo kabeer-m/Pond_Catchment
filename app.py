@@ -51,10 +51,10 @@ def _int_param(name, default):
 
 
 def _analyze():
-    if "file" not in request.files:
-        return jsonify(error="No file uploaded. Send it as multipart/form-data under the 'file' field."), 400
+    if "contour_map" not in request.files:
+        return jsonify(error="No file uploaded. Send it as multipart/form-data under the 'contour_map' field."), 400
 
-    upload = request.files["file"]
+    upload = request.files["contour_map"]
     filename = upload.filename or ""
     ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if ext not in ALLOWED_EXTENSIONS:
