@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pond Catchment</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    
+    <style>
+        :root {
+            --bg-color: #000000;
+            --surface-color: #1a1a1a;
+            --text-main: #ffffff;
+            --text-muted: #a0a0a0;
+            --border-color: #333333;
+            --highlight: #666666;
+            --accent: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: monospace, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        /* --- View Containers --- */
+        #upload-view {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #results-view {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* --- Upload UI --- */
+        .upload-container {
+            background-color: var(--surface-color);
+            padding: 2rem;
+            border: 1px solid var(--border-color);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .upload-container h1 {
+            font-size: 1.5rem;
+            margin-top: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .upload-area {
+            border: 1px dashed var(--border-color);
+            padding: 2rem 1rem;
+            cursor: pointer;
+            position: relative;
+            margin: 1.5rem 0;
+            background-color: var(--bg-color);
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--accent);
+        }
+
+        .upload-area input[type="file"] {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-name {
+            margin-top: 1rem;
+            font-weight: bold;
+            display: none;
+        }
+
+        .btn {
+            background-color: var(--text-main);
+            color: var(--bg-color);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background-color: #cccccc;
+        }
+
+        .btn:disabled {
+            background-color: var(--border-color);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+        
+        .loader {
+            display: none;
+            margin: 1rem auto;
+            border: 2px solid var(--border-color);
+            border-top: 2px solid var(--text-main);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #error-msg {
+            color: #ff3333;
+            margin-top: 1rem;
+            display: none;
+            font-size: 0.9rem;
+        }
+
+        /* --- Results UI --- */
+        header {
+            background-color: var(--surface-color);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+        }
+
+        .back-btn {
+            background-color: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--text-main);
+            padding: 0.4rem 0.8rem;
+            cursor: pointer;
+            text-decoration: none;
+            font-family: inherit;
+        }
+
+        .back-btn:hover {
+            background-color: var(--border-color);
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #map {
+            flex: 2;
+            height: 100%;
+            background-color: var(--bg-color);
+            z-index: 1;
+            /* Make map grayscale to match UI */
+            filter: grayscale(100%);
+        }
+
+        .details-panel {
+            flex: 1;
+            background-color: var(--surface-color);
+            border-left: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .summary-card, .candidate-card {
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background-color: var(--bg-color);
+        }
+
+        .candidate-card:hover {
+            border-color: var(--text-main);
+            cursor: pointer;
+        }
+
+        h2 { margin-top: 0; font-size: 1.1rem; text-transform: uppercase; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+        p { margin: 0.5rem 0; font-size: 0.9rem; color: var(--text-muted); }
+        .stat-value { color: var(--text-main); font-weight: bold; }
+        
+        /* --- Map Markers --- */
+        .rank-marker {
+            background-color: var(--text-main);
+            color: var(--bg-color);
+            border: 2px solid var(--bg-color);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 14px;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- UPLOAD VIEW -->
+    <div id="upload-view">
+        <div class="upload-container">
+            <h1>Pond Catchment</h1>
+            <form id="upload-form">
+                <div class="upload-area" id="drop-area">
+                    <div>[ SELECT KML/KMZ ]</div>
+                    <input type="file" id="file" name="file" accept=".kml,.kmz" required />
+                    <div class="file-name" id="file-name"></div>
+                </div>
+                <button type="submit" class="btn" id="submit-btn">ANALYZE</button>
+                <div class="loader" id="loader"></div>
+            </form>
+            <div id="error-msg"></div>
+        </div>
+    </div>
+
+    <!-- RESULTS VIEW -->
+    <div id="results-view">
+        <header>
+            <h1>RESULTS</h1>
+            <button class="back-btn" onclick="location.reload()">RESET</button>
+        </header>
+        <div class="main-content">
+            <div id="map"></div>
+            <div class="details-panel" id="details-panel"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script>
+        const fileInput = document.getElementById('file');
+        const fileNameDisplay = document.getElementById('file-name');
+        const dropArea = document.getElementById('drop-area');
+        const form = document.getElementById('upload-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const loader = document.getElementById('loader');
+        const errorMsg = document.getElementById('error-msg');
+        
+        let map = null;
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                fileNameDisplay.textContent = e.target.files[0].name;
+                fileNameDisplay.style.display = 'block';
+            }
+        });
+
+        // Drag events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropArea.addEventListener(e, prev, false));
+        function prev(e) { e.preventDefault(); e.stopPropagation(); }
+        ['dragenter', 'dragover'].forEach(e => dropArea.addEventListener(e, () => dropArea.classList.add('dragover'), false));
+        ['dragleave', 'drop'].forEach(e => dropArea.addEventListener(e, () => dropArea.classList.remove('dragover'), false));
+
+        dropArea.addEventListener('drop', (e) => {
+            fileInput.files = e.dataTransfer.files;
+            if (fileInput.files.length > 0) {
+                fileNameDisplay.textContent = fileInput.files[0].name;
+                fileNameDisplay.style.display = 'block';
+            }
+        }, false);
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (fileInput.files.length === 0) return;
+
+            submitBtn.style.display = 'none';
+            loader.style.display = 'block';
+            errorMsg.style.display = 'none';
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const res = await fetch("/analyzeContour", { method: "POST", body: formData });
+                const data = await res.json();
+                
+                if (!res.ok) throw new Error(data.error || "Analysis failed.");
+
+                document.getElementById('upload-view').style.display = 'none';
+                document.getElementById('results-view').style.display = 'flex';
+                
+                renderResults(data, file);
+                
+            } catch (err) {
+                errorMsg.textContent = err.message;
+                errorMsg.style.display = 'block';
+                submitBtn.style.display = 'block';
+                loader.style.display = 'none';
+            }
+        });
+
+        async function renderResults(data, file) {
+            const panel = document.getElementById("details-panel");
+            
+            // Build UI
+            let html = `
+                <div class="summary-card">
+                    <h2>SUMMARY</h2>
+                    <p>FILE: <span class="stat-value">${data.source_file}</span></p>
+                    <p>FOUND: <span class="stat-value">${data.candidate_count}</span></p>
+                    <p>TIME: <span class="stat-value">${data.processing_time_seconds}s</span></p>
+                </div>
+            `;
+            
+            if (data.candidate_count === 0) {
+                html += `<p style="color:#ff3333">[!] ${data.message || 'No candidates.'}</p>`;
+            } else {
+                data.candidates.forEach(c => {
+                    html += `
+                        <div class="candidate-card" onclick="focusCandidate(${c.center.lat}, ${c.center.lon}, ${c.rank})">
+                            <h2>RANK #${c.rank}</h2>
+                            <p>CATCHMENT: <span class="stat-value">${c.catchment_area_hectares.toFixed(2)} ha</span></p>
+                            <p>VOLUME: <span class="stat-value">${c.assumed_pond_volume_m3.toLocaleString()} m3</span></p>
+                            <p>SLOPE: <span class="stat-value">${c.mean_slope_percent.toFixed(1)}%</span></p>
+                        </div>
+                    `;
+                });
+            }
+            panel.innerHTML = html;
+
+            // Init Map
+            if (!map) {
+                map = L.map('map');
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap',
+                    maxZoom: 19
+                }).addTo(map);
+            }
+
+            if (data.terrain_summary.bounding_box) {
+                const bb = data.terrain_summary.bounding_box;
+                map.fitBounds([[bb.min_lat, bb.min_lon], [bb.max_lat, bb.max_lon]]);
+            }
+
+            // Overlay KML Contours if .kml
+            if (file.name.toLowerCase().endsWith('.kml')) {
+                try {
+                    const text = await file.text();
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(text, "text/xml");
+                    const placemarks = xml.getElementsByTagName("Placemark");
+                    
+                    const contourGroup = L.featureGroup().addTo(map);
+                    
+                    for (let p of placemarks) {
+                        const coordsNode = p.getElementsByTagName("coordinates")[0];
+                        if (coordsNode) {
+                            const coordsText = coordsNode.textContent.trim();
+                            const points = coordsText.split(/\s+/).map(pair => {
+                                const [lon, lat] = pair.split(',');
+                                return [parseFloat(lat), parseFloat(lon)];
+                            }).filter(p => !isNaN(p[0]) && !isNaN(p[1]));
+                            
+                            if (points.length > 1) {
+                                L.polyline(points, {
+                                    color: '#666666',
+                                    weight: 1,
+                                    opacity: 0.5
+                                }).addTo(contourGroup);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to parse KML for overlay", e);
+                }
+            }
+
+            // Draw candidates & Markers
+            window.markers = {};
+            if (data.candidates) {
+                data.candidates.forEach(c => {
+                    const latlngs = c.footprint_polygon_lonlat.map(coord => [coord[1], coord[0]]);
+                    
+                    // Polygon
+                    L.polygon(latlngs, {
+                        color: '#ffffff',
+                        fillColor: '#ffffff',
+                        fillOpacity: 0.3,
+                        weight: 2
+                    }).addTo(map);
+
+                    // Rank Marker
+                    const icon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div class="rank-marker">${c.rank}</div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    });
+
+                    const marker = L.marker([c.center.lat, c.center.lon], { icon: icon }).addTo(map);
+                    window.markers[c.rank] = marker;
+                });
+            }
+
+            window.focusCandidate = (lat, lon, rank) => {
+                map.setView([lat, lon], 18);
+            };
+        }
+    </script>
+</body>
+</html>
