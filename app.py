@@ -20,13 +20,19 @@ without code changes.
 import time
 import traceback
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 
 from contour_parser import parse_contours
 from terrain import build_dem, compute_slope_percent, compute_flow_accumulation, compute_invalid_mask
 from pond_finder import find_pond_candidates
 
 app = Flask(__name__)
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
 
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024  # 25 MB
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
