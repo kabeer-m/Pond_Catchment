@@ -16,7 +16,7 @@ import numpy as np
 from pyproj import CRS, Transformer
 from scipy.interpolate import LinearNDInterpolator
 
-from contour_parser import ContourSample
+from .contour_parser import ContourSample
 
 def _utm_crs_for(lon: float, lat: float) -> CRS:
     zone = int((lon + 180) / 6) + 1

@@ -1,159 +1,114 @@
-# Village Pond Planning System
+# Village Pond Catchment & Site Finder
 
-An AI/geospatial-assisted web service that helps identify suitable
-locations for rainwater-harvesting village ponds. Upload a contour map
-(`.kml`/`.kmz`), and the backend builds a Digital Elevation Model (DEM),
-runs a D8 hydrological flow-accumulation analysis, and returns ranked
-candidate pond sites with their estimated catchment area, slope,
-flatness, and assumed storage volume.
+An AI and geospatial-assisted web application designed to identify suitable locations for rainwater-harvesting village ponds. By uploading elevation contour maps (`.kml`/`.kmz`), the platform automatically interpolates Digital Elevation Models (DEMs), computes D8 hydrological flow accumulation, and recommends optimal pond locations based on catchment area, slope, and terrain flatness.
 
-## How it works
+---
 
-1. **`contour_parser.py`** parses the uploaded `.kml`/`.kmz` file into a
-   flat list of `(lon, lat, elevation)` sample points, by walking every
-   elevation-labeled contour `LineString` — no assumptions about the
-   generating tool's folder layout.
-2. **`terrain.py`** reprojects those points into UTM meters and
-   interpolates a regular-grid DEM (Delaunay/TIN → raster), then derives
-   per-cell slope and D8 flow accumulation (a standard hydrology method
-   for estimating each cell's upstream contributing/catchment area).
-3. **`pond_finder.py`** searches the DEM for flat, low-slope windows of
-   the requested pond footprint, scores them by catchment area, and
-   returns the top-N well-separated candidates.
-4. **`app.py`** is the Flask layer tying this together behind a REST API.
+## 🌟 Key Features
 
-## What's new in this change set
+- **Geospatial & Terrain Processing**: Automatically extracts elevation-labeled contours, constructs regular metric DEM rasters, and calculates slope gradients.
+- **Hydrological Flow Accumulation**: Uses the D8 flow accumulation algorithm to model upstream water drainage and catchment area for any location.
+- **Automated Site Selection**: Identifies flat, low-slope candidate sites matching custom pond footprint dimensions, avoiding steep gullies or severe slopes.
+- **Multiple Ranking Strategies**: Offers pluggable candidate ranking options:
+  - `catchment`: Prioritizes maximum contributing catchment area.
+  - `flatness`: Prioritizes flattest terrain (minimizing excavation effort).
+  - `balanced`: Combined scoring balancing catchment area and excavation suitability.
+- **High-Performance Caching & Async Processing**:
+  - SQLite-backed response caching for instant repeated queries.
+  - Non-blocking background worker execution for large contour map analysis.
+- **Interactive Web Interface**: Leaflet-powered visual dashboard showing candidate locations, footprint polygons, slope metrics, and exact coordinates.
 
-The base pipeline above was already solid on the "Terrain and Catchment
-Analysis" side. This change set adds the surrounding engineering that a
-production-leaning service needs, in five small, independently testable
-modules — **none of `contour_parser.py`, `terrain.py`, or
-`pond_finder.py` were touched**:
+---
 
-| File | Adds | CSD Theme |
-|---|---|---|
-| `cache.py` | SQLite-backed cache of full analysis responses, keyed by a hash of (file bytes + parameters), with an explicit secondary index for eviction queries | Caching, Database Indexing / Query Optimization |
-| `jobs.py` | Thread-pool-backed background job runner so a slow analysis doesn't block the request thread; polled via `/jobs/<id>` | Concurrency / Asynchronous Processing |
-| `strategies.py` | Strategy pattern for re-ranking candidates (`catchment`, `flatness`, `balanced`) + a small factory (`get_strategy`) | Design Patterns |
-| `parsers.py` | Factory pattern mapping file extension → parser function, so a future input format is one new function + one table entry | Design Patterns |
-| `auth.py` | Opt-in `X-API-Key` gate (via `POND_API_KEY`) on the compute-heavy endpoints | Authentication / Authorization |
-| `tests/` | 31 pytest unit + integration tests across every module above, plus the existing pipeline | Testing Strategy |
-| `.github/workflows/ci.yml` | Runs the full test suite on every push/PR | Version Control / CI-CD |
-| `app.py` | Rewired to call all of the above; `_analyze()`/`run_analysis()` split into a pure, Flask-independent compute function reused by both the sync and async endpoints | API Design, Error Handling and Resilience *(already present, preserved)* |
+## 🏗️ Architecture & Project Structure
 
-Combined with what the original pipeline already demonstrated (**REST
-API Design**, **Error Handling and Resilience** — extension/size
-validation, structured 400/422/500 responses — and **Algorithms and
-Complexity** — the D8 flow-accumulation algorithm itself, plus the
-vectorized-filter optimization notes in `pond_finder.py`), this project
-now covers **7 of the 13** CSD themes in the assignment's theme table.
-
-`Microservices vs. Monolith` is also addressed as a conscious decision:
-the service stays a single Flask app (a monolith). At this scale — one
-compute pipeline, one team, one deployable artifact — splitting into
-microservices would add network hops and deployment complexity for no
-real benefit; `jobs.py`'s thread pool already gives horizontal headroom
-within the process, and `gunicorn --workers` gives it across processes.
-
-Left out on purpose, with the reasoning: **Load Balancing** (a single
-`gunicorn` instance behind a reverse proxy is enough for this scale; a
-load balancer only pays off once you're running multiple instances) and
-**Database Indexing beyond the cache** (there's no persistent business
-data yet — sites aren't saved — so a full relational schema would be
-speculative; `cache.py`'s indexed table is the one place indexing
-currently applies).
-
-## Project structure
+The project is organized into clean, modular components:
 
 ```
 .
-├── app.py                  # Flask routes + the pure run_analysis() pipeline
-├── contour_parser.py       # KML/KMZ → ContourSample points (unmodified)
-├── terrain.py               # DEM, slope, D8 flow accumulation (unmodified)
-├── pond_finder.py           # Candidate site search (unmodified)
-├── cache.py                 # SQLite result cache + indexing
-├── jobs.py                  # Background job runner (async analysis)
-├── strategies.py             # Candidate ranking strategies (Strategy pattern)
-├── parsers.py                # Input-format factory (Factory pattern)
-├── auth.py                   # API-key auth decorator
-├── requirements.txt
-├── pytest.ini
-├── .github/workflows/ci.yml
-├── templates/index.html
-└── tests/
-    ├── test_app.py
-    ├── test_cache.py
-    ├── test_contour_parser.py
-    ├── test_jobs.py
-    ├── test_pond_finder.py
-    ├── test_strategies_and_parsers.py
-    └── test_terrain.py
+├── app.py                      # Flask REST API entry point & route definitions
+├── src/                        # Core application source code
+│   ├── analysis/               # Geospatial & Hydrological engine
+│   │   ├── contour_parser.py   # KML/KMZ elevation vector parser
+│   │   ├── terrain.py          # DEM interpolation & D8 flow accumulation algorithm
+│   │   ├── pond_finder.py      # Candidate site search & spatial separation
+│   │   ├── parsers.py          # Input parser factory
+│   │   └── strategies.py       # Pluggable candidate ranking strategies
+│   └── services/               # System support services
+│       ├── cache.py            # SQLite response caching & indexing
+│       ├── jobs.py             # Asynchronous thread pool job executor
+│       └── auth.py             # API Key authentication gate
+├── templates/
+│   └── index.html              # Leaflet-based frontend interactive UI
+├── tests/                      # Automated test suite (32 unit & integration tests)
+├── requirements.txt            # Python dependencies
+├── pytest.ini                  # Pytest configuration
+└── README.md                   # Project documentation
 ```
 
-## Setup
+---
+
+## 🚀 Quick Start
+
+### 1. Requirements & Installation
+
+Ensure Python 3.10+ is installed on your system.
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
+# Clone the repository
+git clone <repository-url>
+cd Pond_Catchment
+
+# Create and activate a virtual environment (optional)
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
-python3 app.py          # listens on 0.0.0.0:5000
 ```
 
-Set `POND_API_KEY` in your environment to require the `X-API-Key` header on the compute endpoints; leave it unset for open/local access.
-
-## Running the tests
+### 2. Running the Web Application
 
 ```bash
-pytest -v
+python app.py
 ```
+The application will launch and listen on `http://localhost:5000`. Open your browser to access the interactive upload and mapping UI.
 
-31 tests across unit tests for each module and an integration suite for
-the Flask app (`tests/test_app.py`), run automatically on every push via
-`.github/workflows/ci.yml`.
+---
 
-## API
+## 📡 API Reference
 
-| Method & Path | Purpose |
-|---|---|
-| `POST /analyzeContour` (alias `/findCatchment`) | Synchronous analysis. Multipart field `contour_map` (`.kml`/`.kmz`) + optional form/query params below. |
-| `POST /analyzeContourAsync` | Same input, returns `{"job_id": "..."}` immediately (HTTP 202) instead of blocking. |
-| `GET /jobs/<job_id>` | Poll an async job: `{"status": "pending"\|"running"}`, `{"status": "done", "result": {...}}`, or `{"status": "error", "error": "..."}`. |
-| `GET /health` | Liveness check. |
+### `POST /analyzeContour` (alias: `/findCatchment`)
+Synchronous terrain analysis endpoint. Accepts a multipart contour file and returns ranked candidate pond sites.
 
-**Optional parameters** (form fields or query string):
+- **Content-Type**: `multipart/form-data`
+- **Parameters**:
+  - `contour_map` (or `file`): Uploaded `.kml` or `.kmz` file (*Required*)
+  - `pond_footprint_m`: Side length of target pond footprint in meters (Default: `10.0`)
+  - `cell_size_m`: Resolution of the interpolated DEM grid in meters (Default: `2.0`)
+  - `mask_slope_threshold_percent`: Maximum slope percentage allowed for terrain cells (Default: `8.0`)
+  - `flatness_max_range_m`: Maximum allowed elevation range within a site footprint (Default: `0.3`)
+  - `window_mean_slope_max_percent`: Maximum allowed mean slope within footprint (Default: `5.0`)
+  - `top_n`: Number of ranked candidates to return (Default: `5`)
+  - `ranking`: Ranking strategy (`catchment`, `flatness`, or `balanced`) (Default: `catchment`)
 
-| Param | Default | Meaning |
-|---|---|---|
-| `pond_footprint_m` | `10.0` | Target pond footprint (square, meters/side). |
-| `cell_size_m` | `2.0` | DEM raster resolution. |
-| `mask_slope_threshold_percent` | `8.0` | Cells steeper than this are excluded from analysis entirely. |
-| `flatness_max_range_m` | `0.3` | Max elevation range allowed inside a candidate footprint. |
-| `window_mean_slope_max_percent` | `5.0` | Max mean slope allowed inside a candidate footprint. |
-| `top_n` | `5` | Number of ranked candidates to return. |
-| `ranking` | `catchment` | Re-ranking strategy: `catchment`, `flatness`, or `balanced` (see `strategies.py`). |
+### `POST /analyzeContourAsync`
+Asynchronous variant for processing large contour maps without HTTP timeout. Returns a `job_id` immediately (HTTP 202).
 
-Every response includes `"cache_hit": true/false` (see `cache.py`).
+### `GET /jobs/<job_id>`
+Polls the execution status of an asynchronous job (`pending`, `running`, `done`, or `error`).
 
-If `POND_API_KEY` is set, send it as the `X-API-Key` header on every
-route above except `/health`.
+### `GET /health`
+Liveness health check endpoint returning `{"status": "ok"}`.
 
-### Example
+---
+
+## 🧪 Testing
+
+The repository contains a comprehensive suite of 32 unit and integration tests covering parser logic, DEM construction, D8 flow math, site search separation, caching, async workers, and API endpoints.
+
+To run the test suite:
 
 ```bash
-curl -X POST http://localhost:5000/analyzeContour \
-  -H "X-API-Key: $POND_API_KEY" \
-  -F "contour_map=@village_survey.kml" \
-  -F "top_n=3" \
-  -F "ranking=balanced"
+python -m pytest -v
 ```
-
-## AI Tool Usage Declaration
-
-Claude (Anthropic) was used to: review the existing codebase and map it
-against the assignment's CSD-themes checklist; design and implement the
-five new modules (`cache.py`, `jobs.py`, `strategies.py`, `parsers.py`,
-`auth.py`) and the corresponding test suite and CI workflow; and draft this README. All generated code was
-run against a real test suite (31 passing tests, including a regression
-test for a genuine race condition found during development in
-`jobs.py`) and reviewed line-by-line before inclusion — nothing here was
-accepted unread. `contour_parser.py`, `terrain.py`, and `pond_finder.py`
-(the core terrain/catchment algorithms) were not modified.

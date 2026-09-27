@@ -8,7 +8,7 @@ deterministic, and doesn't depend on any fixture file on disk.
 
 import pytest
 
-from contour_parser import parse_contours
+from src.analysis.contour_parser import parse_contours
 
 SAMPLE_KML = b"""<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">

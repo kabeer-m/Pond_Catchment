@@ -16,7 +16,7 @@ function with the ContourSample-list signature and adding one line to
 _PARSERS -- app.py and contour_parser.py do not change.
 """
 
-from contour_parser import ContourSample, parse_contours
+from .contour_parser import ContourSample, parse_contours
 
 ParserFunc = "Callable[[bytes, str], list[ContourSample]]"
 

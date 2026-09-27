@@ -29,15 +29,14 @@ import traceback
 
 from flask import Flask, jsonify, request, render_template
 
-import cache
-import jobs
-from auth import require_api_key
-from parsers import get_parser
-from strategies import get_strategy
-from terrain import (
+from src.services import cache, jobs
+from src.services.auth import require_api_key
+from src.analysis.parsers import get_parser
+from src.analysis.strategies import get_strategy
+from src.analysis.terrain import (
     build_dem, compute_slope_percent, compute_flow_accumulation, compute_invalid_mask,
 )
-from pond_finder import find_pond_candidates
+from src.analysis.pond_finder import find_pond_candidates
 
 app = Flask(__name__)
 

@@ -5,9 +5,9 @@ pattern). CSD: Testing Strategy + Design Patterns.
 
 import pytest
 
-from pond_finder import PondCandidate
-from strategies import get_strategy
-from parsers import get_parser, SUPPORTED_EXTENSIONS
+from src.analysis.pond_finder import PondCandidate
+from src.analysis.strategies import get_strategy
+from src.analysis.parsers import get_parser, SUPPORTED_EXTENSIONS
 
 
 def _candidate(catchment_area_m2, elevation_range_m):

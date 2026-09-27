@@ -11,7 +11,7 @@ exactly the kind of bug concurrent code needs a regression test for.
 
 import time
 
-import jobs
+from src.services import jobs
 
 
 def test_successful_job_reaches_done_with_its_result():

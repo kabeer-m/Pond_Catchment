@@ -8,7 +8,7 @@ analysis_cache.db), so tests can't corrupt real cached results.
 
 import time
 
-import cache
+from src.services import cache
 
 
 def test_miss_then_hit(tmp_path):

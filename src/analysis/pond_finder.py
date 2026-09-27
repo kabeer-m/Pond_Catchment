@@ -24,7 +24,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy import ndimage
 
-from terrain import DEM
+from .terrain import DEM
 
 @dataclass
 class PondCandidate:

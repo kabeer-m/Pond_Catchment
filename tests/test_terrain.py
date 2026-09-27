@@ -10,8 +10,8 @@ it on a real, much larger DEM).
 import numpy as np
 import pytest
 
-from contour_parser import ContourSample
-from terrain import (
+from src.analysis.contour_parser import ContourSample
+from src.analysis.terrain import (
     DEM,
     build_dem,
     compute_flow_accumulation,

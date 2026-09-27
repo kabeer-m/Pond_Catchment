@@ -22,7 +22,7 @@ entry in STRATEGIES -- nothing else in the codebase changes.
 
 from abc import ABC, abstractmethod
 
-from pond_finder import PondCandidate
+from .pond_finder import PondCandidate
 
 
 class RankingStrategy(ABC):

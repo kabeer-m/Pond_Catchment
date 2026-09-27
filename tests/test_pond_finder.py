@@ -9,8 +9,8 @@ minimum-separation de-duplication -- is tested in isolation.
 
 import numpy as np
 
-from terrain import DEM
-from pond_finder import find_pond_candidates
+from src.analysis.terrain import DEM
+from src.analysis.pond_finder import find_pond_candidates
 
 
 def _flat_dem(size=21, cell_size=1.0):

@@ -14,7 +14,7 @@ import io
 import pytest
 
 import app as app_module
-import cache
+from src.services import cache
 
 
 SAMPLE_KML = b"""<?xml version="1.0" encoding="UTF-8"?>
