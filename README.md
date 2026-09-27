@@ -40,9 +40,8 @@ The project is organized into clean, modular components:
 │       └── auth.py             # API Key authentication gate
 ├── templates/
 │   └── index.html              # Leaflet-based frontend interactive UI
-├── tests/                      # Automated test suite (32 unit & integration tests)
+├── benchmark_tests.py          # Comprehensive system benchmark & integration test suite
 ├── requirements.txt            # Python dependencies
-├── pytest.ini                  # Pytest configuration
 └── README.md                   # Project documentation
 ```
 
@@ -103,12 +102,12 @@ Liveness health check endpoint returning `{"status": "ok"}`.
 
 ---
 
-## 🧪 Testing
+## 🧪 Testing & Benchmarking
 
-The repository contains a comprehensive suite of 32 unit and integration tests covering parser logic, DEM construction, D8 flow math, site search separation, caching, async workers, and API endpoints.
+The repository contains an automated benchmark and integration test suite (`benchmark_tests.py`) covering live endpoint performance, DEM hydrology computation, SQLite cache hits, background async job execution, concurrency, and validation error handling.
 
-To run the test suite:
+To run the system test & benchmark suite:
 
 ```bash
-python -m pytest -v
+python benchmark_tests.py
 ```
