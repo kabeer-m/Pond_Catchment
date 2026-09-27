@@ -1,0 +1,24 @@
+# Archive of pre-existing untracked files
+_untracked_archive/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Testing / caching
+.pytest_cache/
+analysis_cache.db
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store

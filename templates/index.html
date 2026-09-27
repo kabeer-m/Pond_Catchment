@@ -289,7 +289,7 @@
 
             const file = fileInput.files[0];
             const formData = new FormData();
-            formData.append("file", file);
+            formData.append("contour_map", file);
 
             try {
                 const res = await fetch("/analyzeContour", { method: "POST", body: formData });
@@ -330,8 +330,10 @@
                     html += `
                         <div class="candidate-card" onclick="focusCandidate(${c.center.lat}, ${c.center.lon}, ${c.rank})">
                             <h2>RANK #${c.rank}</h2>
-                            <p>CATCHMENT: <span class="stat-value">${c.catchment_area_hectares.toFixed(2)} ha</span></p>
-                            <p>VOLUME: <span class="stat-value">${c.assumed_pond_volume_m3.toLocaleString()} m3</span></p>
+                            <p>LAT: <span class="stat-value">${c.center.lat.toFixed(6)}</span></p>
+                            <p>LON: <span class="stat-value">${c.center.lon.toFixed(6)}</span></p>
+                            <p>CATCHMENT: <span class="stat-value">${c.catchment_area_hectares.toFixed(2)} ha</span> (${c.catchment_area_m2.toLocaleString()} m²)</p>
+                            <p>VOLUME: <span class="stat-value">${c.assumed_pond_volume_m3.toLocaleString()} m³</span></p>
                             <p>SLOPE: <span class="stat-value">${c.mean_slope_percent.toFixed(1)}%</span></p>
                         </div>
                     `;
@@ -409,12 +411,16 @@
                     });
 
                     const marker = L.marker([c.center.lat, c.center.lon], { icon: icon }).addTo(map);
+                    marker.bindPopup(`<b>Rank #${c.rank}</b><br>Lat: ${c.center.lat.toFixed(6)}<br>Lon: ${c.center.lon.toFixed(6)}<br>Catchment: ${c.catchment_area_hectares.toFixed(2)} ha`);
                     window.markers[c.rank] = marker;
                 });
             }
 
             window.focusCandidate = (lat, lon, rank) => {
                 map.setView([lat, lon], 18);
+                if (window.markers && window.markers[rank]) {
+                    window.markers[rank].openPopup();
+                }
             };
         }
     </script>
