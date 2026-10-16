@@ -1,5 +1,7 @@
 # Village Pond Catchment & Site Finder
 
+Hosted at : http://10.1.75.79:5213
+
 An AI and geospatial-assisted web application designed to identify suitable locations for rainwater-harvesting village ponds. By uploading elevation contour maps (`.kml`/`.kmz`), the platform automatically interpolates Digital Elevation Models (DEMs), computes D8 hydrological flow accumulation, and recommends optimal pond locations based on catchment area, slope, and terrain flatness.
 
 ---
